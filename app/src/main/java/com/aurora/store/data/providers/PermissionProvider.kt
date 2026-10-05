@@ -33,6 +33,8 @@ import com.aurora.extensions.toast
 import com.aurora.gplayapi.data.models.App
 import com.aurora.store.BuildConfig
 import com.aurora.store.R
+import com.aurora.store.data.installer.AppInstaller
+import com.aurora.store.data.model.Installer
 import com.aurora.store.data.model.Permission
 import com.aurora.store.data.model.PermissionType
 import com.aurora.store.util.PackageUtil
@@ -46,7 +48,16 @@ class PermissionProvider(private val fragment: Fragment) :
          * Checks if Aurora Store has permissions to install the given app
          */
         fun isPermittedToInstall(context: Context, app: App): Boolean {
-            if (!isGranted(context, PermissionType.INSTALL_UNKNOWN_APPS)) return false
+            val selectedInstaller = AppInstaller.getCurrentInstaller(context)
+            val usesPrivilegedInstaller = when (selectedInstaller) {
+                Installer.ROOT -> AppInstaller.hasRootAccess()
+                Installer.SHIZUKU -> AppInstaller.hasShizukuOrSui(context) &&
+                    AppInstaller.hasShizukuPerm(context)
+                else -> false
+            }
+            if (!usesPrivilegedInstaller &&
+                !isGranted(context, PermissionType.INSTALL_UNKNOWN_APPS)
+            ) return false
             return when {
                 app.fileList.requiresObbDir() -> {
                     return isGranted(context, PermissionType.STORAGE_MANAGER)
@@ -97,7 +108,8 @@ class PermissionProvider(private val fragment: Fragment) :
                     } else {
                         context.getString(R.string.onboarding_permission_installer_legacy_desc)
                     },
-                    optional = false,
+                    // Root and Shizuku installers can install without this native permission.
+                    optional = true,
                     isGranted = isGranted(context, PermissionType.INSTALL_UNKNOWN_APPS)
                 ),
                 Permission(
