@@ -113,11 +113,7 @@ fun PermissionList(
                 }
 
                 PermissionType.STORAGE_MANAGER -> {
-                    if (!isGranted(context, PermissionType.INSTALL_UNKNOWN_APPS)) {
-                        context.toast(R.string.toast_permission_installer_required)
-                    } else {
-                        permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    }
+                    permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 }
 
                 else -> {

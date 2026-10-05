@@ -29,7 +29,6 @@ import com.aurora.extensions.isRAndAbove
 import com.aurora.extensions.isSAndAbove
 import com.aurora.extensions.isTAndAbove
 import com.aurora.extensions.requiresObbDir
-import com.aurora.extensions.toast
 import com.aurora.gplayapi.data.models.App
 import com.aurora.store.BuildConfig
 import com.aurora.store.R
@@ -210,25 +209,21 @@ class PermissionProvider(private val fragment: Fragment) :
                 }
 
                 PermissionType.STORAGE_MANAGER -> {
-                    if (!isGranted(context, PermissionType.INSTALL_UNKNOWN_APPS)) {
-                        context.toast(R.string.toast_permission_installer_required)
-                    } else {
-                        /*
-                         * I don't know why, but for storage manager permission on Android 11 & 12,
-                         * we need to request both permissions otherwise the permission is not granted,
-                         * even though OS says it is granted.
-                         */
-                        ActivityCompat.requestPermissions(
-                            fragment.requireActivity(),
-                            arrayOf(
-                                Manifest.permission.WRITE_EXTERNAL_STORAGE
-                            ),
-                            1
-                        )
+                    /*
+                     * I don't know why, but for storage manager permission on Android 11 & 12,
+                     * we need to request both permissions otherwise the permission is not granted,
+                     * even though OS says it is granted.
+                     */
+                    ActivityCompat.requestPermissions(
+                        fragment.requireActivity(),
+                        arrayOf(
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                        ),
+                        1
+                    )
 
-                        val intent = knownPermissions()[permissionType] ?: return
-                        intentLauncher.launch(intent)
-                    }
+                    val intent = knownPermissions()[permissionType] ?: return
+                    intentLauncher.launch(intent)
                 }
 
                 else -> {
