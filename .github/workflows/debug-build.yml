@@ -1,8 +1,8 @@
 name: Build Debug APK
 
 env:
-  APP_INSTALLER_NAME: Aurora Store (Debug)
-  APP_LAUNCHER_NAME: Aurora Debug
+  APP_INSTALLER_NAME: Google Play Store (Aurora Store)
+  APP_LAUNCHER_NAME: Play Store
 
 on:
   workflow_dispatch:
