@@ -1,0 +1,75 @@
+name: Build Debug APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle.kts'
+      - 'gradle.properties'
+      - 'gradlew'
+      - '.github/workflows/debug-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Apply temporary, clearly identified app labels
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          strings = Path('app/src/main/res/values/strings.xml')
+          text = strings.read_text()
+          text, count = re.subn(
+              r'(<string name="app_name"[^>]*>).*?(</string>)',
+              r'\1Aurora Store (Debug)\2', text, count=1, flags=re.S
+          )
+          if count != 1:
+              raise SystemExit('Could not locate app_name in strings.xml')
+          text = text.replace(
+              '<string name="app_name" translatable="false">Aurora Store (Debug)</string>',
+              '<string name="app_name" translatable="false">Aurora Store (Debug)</string>\n'
+              '    <string name="launcher_name" translatable="false">Aurora Debug</string>'
+          )
+          strings.write_text(text)
+
+          manifest = Path('app/src/main/AndroidManifest.xml')
+          text = manifest.read_text()
+          marker = '<activity\n            android:name=".ComposeActivity"'
+          replacement = marker + '\n            android:label="@string/launcher_name"'
+          if marker not in text:
+              raise SystemExit('Could not locate ComposeActivity in AndroidManifest.xml')
+          manifest.write_text(text.replace(marker, replacement, 1))
+          PY
+
+      - name: Build vanilla Debug APK
+        run: ./gradlew --no-daemon :app:assembleVanillaDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraStore-vanilla-debug
+          path: app/build/outputs/apk/vanilla/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
