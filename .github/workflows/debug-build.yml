@@ -3,6 +3,7 @@ name: Build Debug APK
 env:
   APP_INSTALLER_NAME: Google Play Store (Aurora Store)
   APP_LAUNCHER_NAME: Play Store
+  APP_PACKAGE_NAME: com.aurora.store.debug
 
 on:
   workflow_dispatch:
@@ -36,7 +37,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Apply temporary, clearly identified app labels
+      - name: Apply temporary app labels and package name
         shell: bash
         run: |
           python3 - <<'PY'
@@ -46,6 +47,10 @@ jobs:
 
           installer_name = os.environ['APP_INSTALLER_NAME']
           launcher_name = os.environ['APP_LAUNCHER_NAME']
+          package_name = os.environ['APP_PACKAGE_NAME']
+          if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+', package_name):
+              raise SystemExit('APP_PACKAGE_NAME must look like com.example.app')
+
           strings = Path('app/src/main/res/values/strings.xml')
           text = strings.read_text()
           text, count = re.subn(
@@ -69,6 +74,24 @@ jobs:
           if marker not in text:
               raise SystemExit('Could not locate ComposeActivity in AndroidManifest.xml')
           manifest.write_text(text.replace(marker, replacement, 1))
+
+          gradle_file = Path('app/build.gradle.kts')
+          text = gradle_file.read_text()
+          text, count = re.subn(
+              r'(applicationId\s*=\s*)"com\.aurora\.store"',
+              lambda match: match.group(1) + '"' + package_name + '"',
+              text, count=1
+          )
+          if count != 1:
+              raise SystemExit('Could not locate defaultConfig applicationId in app/build.gradle.kts')
+          text, count = re.subn(
+              r'(debug\s*\{[^}]*applicationIdSuffix\s*=\s*)"\.debug"',
+              lambda match: match.group(1) + '""',
+              text, count=1, flags=re.S
+          )
+          if count != 1:
+              raise SystemExit('Could not locate debug applicationIdSuffix in app/build.gradle.kts')
+          gradle_file.write_text(text)
           PY
 
       - name: Build vanilla Debug APK
