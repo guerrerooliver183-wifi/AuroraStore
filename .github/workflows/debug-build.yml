@@ -1,5 +1,9 @@
 name: Build Debug APK
 
+env:
+  APP_INSTALLER_NAME: Aurora Store (Debug)
+  APP_LAUNCHER_NAME: Aurora Debug
+
 on:
   workflow_dispatch:
   push:
@@ -36,21 +40,25 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
+          import os
           from pathlib import Path
           import re
 
+          installer_name = os.environ['APP_INSTALLER_NAME']
+          launcher_name = os.environ['APP_LAUNCHER_NAME']
           strings = Path('app/src/main/res/values/strings.xml')
           text = strings.read_text()
           text, count = re.subn(
               r'(<string name="app_name"[^>]*>).*?(</string>)',
-              r'\1Aurora Store (Debug)\2', text, count=1, flags=re.S
+              lambda match: match.group(1) + installer_name + match.group(2),
+              text, count=1, flags=re.S
           )
           if count != 1:
               raise SystemExit('Could not locate app_name in strings.xml')
           text = text.replace(
-              '<string name="app_name" translatable="false">Aurora Store (Debug)</string>',
-              '<string name="app_name" translatable="false">Aurora Store (Debug)</string>\n'
-              '    <string name="launcher_name" translatable="false">Aurora Debug</string>'
+              f'<string name="app_name" translatable="false">{installer_name}</string>',
+              f'<string name="app_name" translatable="false">{installer_name}</string>\n'
+              f'    <string name="launcher_name" translatable="false">{launcher_name}</string>'
           )
           strings.write_text(text)
 
